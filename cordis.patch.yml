@@ -1,0 +1,23 @@
+# dsh bundle patch — the `dsh.bundle.patch` layer of this package.
+#
+# Installing the package as a profile bundle reconciles `dsh.profile.bundles` and
+# merges this file, exactly like the manual mount line a user would otherwise add
+# to the profile's own cordis.patch.yml:
+#
+#   dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+#
+# The inserted row is this package's host half. It has no services and no client
+# half: on boot it keeps ${DSH_HOME:-~/.dsh}/.agent-presets/claude-fable-5-1/ in
+# sync with the `preset/` directory shipped in this package, so the preset shows
+# up in the roster without any manual file copy.
+#
+# The sync is idempotent (per-file content comparison) and never throws: a failure
+# logs and leaves the rest of the profile booting.
+#
+# Uninstall:
+#   dsh plugin --profile web remove dsh-preset-claude-fable-5-1
+#   # the installed preset directory is left in place; delete it if you want it gone:
+#   #   <DSH_HOME>/.agent-presets/claude-fable-5-1/
+- insert:
+    - id: claude-fable-5-1-preset
+      name: 'dsh-preset-claude-fable-5-1'

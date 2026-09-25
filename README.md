@@ -28,6 +28,10 @@ Claude Fable 5.1 原文运行的 agent。
 
 ```
 .
+├── package.json              # 同时是一个 dsh bundle 插件（dsh.bundle.patch）
+├── cordis.patch.yml          # bundle patch：insert 一行 host 插件
+├── lib/
+│   └── index.js              # host 插件：把 preset/ 同步进 $DSH_HOME/.agent-presets/
 ├── preset/
 │   ├── agent.cordis.yml      # 可直接安装的 composition（含内联人格，约 300 KB）
 │   └── preset.yml            # 显示名与描述
@@ -40,8 +44,8 @@ Claude Fable 5.1 原文运行的 agent。
 │   ├── build.mjs             # 由 base/ + prompt/ 生成 preset/agent.cordis.yml
 │   ├── check.mjs             # 生成物自检（YAML 可解析、row 完整、无 {{ }} 变量组）
 │   ├── ci-check.sh           # 本地 CI：构建可复现校验 + 自检
-│   ├── install.ps1           # Windows 安装
-│   └── install.sh            # macOS / Linux 安装
+│   ├── install.ps1           # Windows 安装（方式 B）
+│   └── install.sh            # macOS / Linux 安装（方式 B）
 ├── docs/
 │   └── notes.md              # 原理、schema 迁移坑、升级维护说明
 ├── NOTICE.md                 # 提示词文本的来源与归属
@@ -54,23 +58,41 @@ Claude Fable 5.1 原文运行的 agent。
 
 预设按 id 决定目录名，dsh 只会从 `${DSH_HOME:-~/.dsh}/.agent-presets/<id>/` 读取本地预设。
 
-### Windows
+### 方式 A：通过 dsh 安装（推荐，一条命令，自带更新）
 
-```powershell
-git clone https://github.com/<you>/claude-fable-5-1-dsh-preset.git
-cd claude-fable-5-1-dsh-preset
-pwsh -File scripts/install.ps1
-```
-
-### macOS / Linux
+本仓库同时是一个 **dsh bundle 插件**（`package.json` 里声明 `dsh.bundle.patch`，
+`cordis.patch.yml` 里 insert 一行 host 插件）。装上之后它会在每次启动时把仓库里
+`preset/` 的两个文件同步进预设目录，因此不需要手动复制：
 
 ```bash
-git clone https://github.com/<you>/claude-fable-5-1-dsh-preset.git
-cd claude-fable-5-1-dsh-preset
-bash scripts/install.sh
+dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+# 然后重启 dsh web（bundle 层在下次启动时加载）
 ```
 
-### 手动安装
+- 安装/升级：`dsh plugin --profile web add|update dsh-preset-claude-fable-5-1`
+- 卸载：`dsh plugin --profile web remove dsh-preset-claude-fable-5-1`
+  （已落盘的预设目录会保留，需要时自己删 `<DSH_HOME>/.agent-presets/claude-fable-5-1/`）
+- 该插件**零依赖**（只用 node 内置模块）、**幂等**（逐文件比字节，内容一样就不写）、
+  **不会因为失败而拖垮启动**（出错只打日志）。它会覆盖同名的本地改动：
+  仓库版本为准。
+- 若 pnpm 提示需要 `allowBuilds`，那只会出现在带 `prepare`/`postinstall` 的包上，
+  本包没有安装脚本，正常情况不需要授权。
+
+### 方式 B：克隆后运行安装脚本
+
+```powershell
+git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
+cd claude-fable-5-1-dsh-preset
+pwsh -File scripts/install.ps1        # Windows
+```
+
+```bash
+git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
+cd claude-fable-5-1-dsh-preset
+bash scripts/install.sh               # macOS / Linux
+```
+
+### 方式 C：手动复制
 
 把 `preset/` 里的两个文件复制到 `%DSH_HOME%\.agent-presets\claude-fable-5-1\`
 （或 `~/.dsh/.agent-presets/claude-fable-5-1/`）：
@@ -80,14 +102,33 @@ bash scripts/install.sh
 .agent-presets/claude-fable-5-1/preset.yml
 ```
 
+### 零拷贝（进阶）
+
+`dsh-agent-presets` 的 row 支持 `roots` 配置（扫描顺序里靠前的 root 优先），
+所以也可以把克隆下来的仓库直接挂成一个预设 root——把 `preset/` 重排成
+`presets/claude-fable-5-1/agent.cordis.yml`，再在 profile 的 `cordis.patch.yml`
+或宿主配置里给 `agent-presets` row 加：
+
+```yaml
+- id: agent-presets
+  config:
+    roots:
+      - path: ~/src/claude-fable-5-1-dsh-preset/presets
+        trust: user
+```
+
+`path` 支持 `~`，相对路径按进程 cwd 解析，所以请用绝对路径或 `~`。
+这样 `git pull` 就等于升级预设，代价是要手改配置。
+
 ---
 
 ## 验证与重建
 
 ```bash
-node scripts/build.mjs     # 由 base/ + prompt/ 重建 preset/agent.cordis.yml
-node scripts/check.mjs     # 自检：YAML 可解析、row 完整、persona 无 {{ }} 变量组
-bash scripts/ci-check.sh   # 以上两步 + 构建可复现校验（本地 CI）
+node scripts/build.mjs        # 由 base/ + prompt/ 重建 preset/agent.cordis.yml
+node scripts/check.mjs        # 自检：YAML 可解析、row 完整、persona 无 {{ }} 变量组
+node scripts/check-plugin.mjs # bundle 插件自检：DSH_HOME 解析、安装、幂等
+bash scripts/ci-check.sh      # 以上三步 + 构建可复现校验（本地 CI）
 ```
 
 `preset/agent.cordis.yml` 是**生成物**：改人格文本或同步 `base/` 之后必须重跑
@@ -154,11 +195,16 @@ cp "$DSH_INSTALL/node_modules/@deepseek-ai/dsh-agent-presets/presets/standard/ag
 # 2) 重建 + 自检
 node scripts/build.mjs
 node scripts/check.mjs
-# 3) 重新安装，并在 GUI 里新建一次会话确认
+# 3) 安装/更新，并在 GUI 里新建一次会话确认
+dsh plugin --profile web update dsh-preset-claude-fable-5-1   # 方式 A（bundle）
+#   或 bash scripts/install.sh / pwsh -File scripts/install.ps1 -Force
 ```
 
 shipped 预设目录位置与预设 id 也会随版本变化（例如 0.1.5 起目录移到
 `node_modules/@deepseek-ai/dsh-agent-presets/presets/`，预设 `code` 更名为 `ptc`）。
+
+用 bundle 安装（方式 A）时，`dsh plugin ... update` 会把新版 `preset/` 同步进预设目录，
+不需要再手动复制——插件逐文件比对内容，只有真的变了才写。
 
 ---
 

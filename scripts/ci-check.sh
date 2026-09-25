@@ -32,5 +32,8 @@ console.log("ok: no prompt variable groups");
 echo "== composition structure =="
 node scripts/check.mjs
 
+echo "== bundle plugin =="
+node scripts/check-plugin.mjs
+
 echo
 echo "all checks passed"

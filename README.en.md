@@ -22,11 +22,38 @@ unchanged from the upstream `standard` composition.
 
 ## Install
 
+### A. Through dsh (recommended)
+
+The repository is also a **dsh bundle plugin** (`dsh.bundle.patch` in `package.json`,
+one inserted host row in `cordis.patch.yml`). It syncs `preset/` into
+`${DSH_HOME:-~/.dsh}/.agent-presets/claude-fable-5-1/` on every boot, so no manual copy
+is needed:
+
 ```bash
-git clone https://github.com/<you>/claude-fable-5-1-dsh-preset.git
+dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+# restart dsh web: bundle layers load on the next start
+```
+
+- upgrade: `dsh plugin --profile web update dsh-preset-claude-fable-5-1`
+- uninstall: `dsh plugin --profile web remove dsh-preset-claude-fable-5-1`
+  (the installed preset directory is left behind; delete it if you want it gone)
+- the plugin has zero dependencies, is idempotent (per-file byte comparison), never
+  throws, and treats this repository as the source of truth over local edits.
+
+### B. Clone and run the installer
+
+```bash
+git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
 cd claude-fable-5-1-dsh-preset
 bash scripts/install.sh          # macOS / Linux
 pwsh -File scripts/install.ps1   # Windows
+```
+
+### C. Copy the files by hand
+
+```
+<DSH_HOME>/.agent-presets/claude-fable-5-1/agent.cordis.yml
+<DSH_HOME>/.agent-presets/claude-fable-5-1/preset.yml
 ```
 
 Then pick **Claude Fable 5.1** in the preset picker, or make it the default:
@@ -40,11 +67,14 @@ agent-presets:
 ## Layout
 
 ```
-preset/     ready-to-install composition + metadata
-base/       upstream dsh `standard` composition this preset derives from
-prompt/     persona source text + run-environment adaptation
-scripts/    build / check / install
-docs/       how dsh prompt assembly works, schema-migration gotchas
+package.json          also a dsh bundle plugin (dsh.bundle.patch)
+cordis.patch.yml      bundle patch: inserts the host row
+lib/index.js          host row: syncs preset/ into the preset root
+preset/               ready-to-install composition + metadata
+base/                 upstream dsh `standard` composition this preset derives from
+prompt/               persona source text + run-environment adaptation
+scripts/              build / check / install
+docs/                 how dsh prompt assembly works, schema-migration gotchas
 ```
 
 ## Rebuild after a dsh upgrade
