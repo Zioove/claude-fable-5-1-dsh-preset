@@ -30,7 +30,7 @@ one inserted host row in `cordis.patch.yml`). It syncs `preset/` into
 is needed:
 
 ```bash
-dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+dsh plugin --profile web add github:Zioove/claude-fable-5-1-dsh-preset
 # restart dsh web: bundle layers load on the next start
 ```
 
@@ -43,7 +43,7 @@ dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
 ### B. Clone and run the installer
 
 ```bash
-git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
+git clone https://github.com/Zioove/claude-fable-5-1-dsh-preset.git
 cd claude-fable-5-1-dsh-preset
 bash scripts/install.sh          # macOS / Linux
 pwsh -File scripts/install.ps1   # Windows

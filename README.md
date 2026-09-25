@@ -65,7 +65,7 @@ Claude Fable 5.1 原文运行的 agent。
 `preset/` 的两个文件同步进预设目录，因此不需要手动复制：
 
 ```bash
-dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+dsh plugin --profile web add github:Zioove/claude-fable-5-1-dsh-preset
 # 然后重启 dsh web（bundle 层在下次启动时加载）
 ```
 
@@ -81,13 +81,13 @@ dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
 ### 方式 B：克隆后运行安装脚本
 
 ```powershell
-git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
+git clone https://github.com/Zioove/claude-fable-5-1-dsh-preset.git
 cd claude-fable-5-1-dsh-preset
 pwsh -File scripts/install.ps1        # Windows
 ```
 
 ```bash
-git clone https://github.com/ZH1110/claude-fable-5-1-dsh-preset.git
+git clone https://github.com/Zioove/claude-fable-5-1-dsh-preset.git
 cd claude-fable-5-1-dsh-preset
 bash scripts/install.sh               # macOS / Linux
 ```

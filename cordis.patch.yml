@@ -4,7 +4,7 @@
 # merges this file, exactly like the manual mount line a user would otherwise add
 # to the profile's own cordis.patch.yml:
 #
-#   dsh plugin --profile web add github:ZH1110/claude-fable-5-1-dsh-preset
+#   dsh plugin --profile web add github:Zioove/claude-fable-5-1-dsh-preset
 #
 # The inserted row is this package's host half. It has no services and no client
 # half: on boot it keeps ${DSH_HOME:-~/.dsh}/.agent-presets/claude-fable-5-1/ in
