@@ -1,0 +1,2 @@
+name: Claude Fable 5.1
+description: 以 Claude Fable 5.1 系统提示词为人格的完整编码 Agent：保留标准模式的全部工具（文件、Shell、检索、Skills、计划、目标、子代理、工作流），人格 prefix 段替换为 Claude Fable 5.1 全文，并附加本 harness 的工具可用性适配段。
