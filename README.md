@@ -19,6 +19,12 @@ Claude Fable 5.1 原文运行的 agent。
 - **一段运行环境适配**：`prompt/harness-bridge.md` 把原文里提到的产品侧工具
   （`memory_read`、`conversation_search`、`search_mcp_registry`、`window.storage`、
   `end_conversation` …）收敛到本 harness 真实存在的工具，避免模型调用不存在的工具。
+- **子代理不再背人格**：`tool-subagent`（provider `spawn`）行带一段 449 字符的子代理人格，
+  新 spawn 的子代理不会复制 275 KB 人格（fork 行刻意保持继承父人格——它的意义就是继承历史
+  并复用 KV cache）。
+- **原文随预设自带**：预设内 `skills/claude-fable-5-1-provenance/`（由 `customSkillDirs`
+  + `baseUrl` 挂载）把人格来源、重建/裁剪步骤与**逐字原文**放进一个按需加载的 skill，
+  常驻 token 成本为 0。
 - **可重建**：`scripts/build.mjs` 从 `base/` + `prompt/` 重新生成 composition，
   dsh 升级后一条命令即可跟上新 schema。
 - **已挂载校验**：composition 通过 `agentPresets.standingKeyFor()` 真实挂载，
@@ -36,7 +42,11 @@ Claude Fable 5.1 原文运行的 agent。
 │   └── index.js              # host 插件：把 preset/ 同步进 $DSH_HOME/.agent-presets/
 ├── preset/
 │   ├── agent.cordis.yml      # 可直接安装的 composition（含内联人格，约 300 KB）
-│   └── preset.yml            # 显示名与描述
+│   ├── preset.yml            # 显示名与描述
+│   └── skills/
+│       └── claude-fable-5-1-provenance/
+│           ├── SKILL.md      # 预设自带的 skill：来源、重建/裁剪、升级坑
+│           └── reference/Claude-Fable-5.1.md   # 人格逐字原文（裁剪后可对照取回）
 ├── base/
 │   └── standard.agent.cordis.yml   # 派生的上游基线（dsh 0.1.5-rc.3 的 standard 预设）
 ├── prompt/
@@ -149,6 +159,22 @@ bash scripts/ci-check.sh      # 以上三步 + 构建可复现校验（本地 CI
    ```
 
    （该值每次解析时读取，改完不需要重启 dsh。也可直接在 GUI 的预设选择器里切换。）
+
+---
+
+## 本预设相对 standard 的刻意改动
+
+`build.mjs` 里有一个显式的 `PATCHES` 列表，每处改动都写明了它覆盖的是上游哪个事实、为什么。
+锚点在新版 `standard` 里找不到（或匹配多处）时构建会**报错退出**，不会静默丢掉改动：
+
+| 改动 | 为什么 |
+|---|---|
+| `skill-filesystem` 加 `customSkillDirs`（`!!js` + `baseUrl` 指向 preset 自己的 `skills/`） | 让来源与原文随预设自带、按需加载；这是 shipped `cordis` 预设用的同一套机制 |
+| `tool-subagent`（spawn）加 449 字符 `persona` | 人格是常驻成本，新 spawn 的子代理不需要 275 KB 版本；fork 不加，因为它要继承历史并复用父级 KV cache |
+
+另外人格首段通过 `{{model}}` 引用当前模型名——**上游范式是「一个事实只有一个归属方」**：
+模型名由 agent-loop 注册为提示词变量，人格只引用它、不硬写。dsh 的插值是严格的，
+未注册的 `{{...}}` 会让整轮请求失败，所以 `build.mjs` 会拒绝生成含未注册变量的人格。
 
 ---
 

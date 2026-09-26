@@ -6,6 +6,14 @@
  * composition is parsed with the same dialect the loader uses (`!!js` tags included).
  * Falls back to reporting that js-yaml is unavailable rather than failing the build.
  *
+ * Asserts the things that make this preset what it is:
+ *   rows      every row `standard` supplies is still there (the derivation dropped nothing);
+ *   persona   dsh >= 0.1.5 `prefix`/`suffix` schema, the bridge present, and no group dsh
+ *             could not interpolate;
+ *   patches   the preset-local skill root and the subagent child-persona patch are in the
+ *             artifact, and the fork row deliberately keeps the parent persona;
+ *   skill     the bundled skill and its reference text exist on disk.
+ *
  * Run:  node scripts/check.mjs
  */
 import { readFileSync, existsSync } from 'node:fs'
@@ -21,6 +29,23 @@ const requiredRows = [
   'persona', 'agent-instructions', 'tool-fs', 'tool-fs-search', 'tool-jobs',
   'skill-filesystem', 'tool-skill', 'tool-goal', 'planning', 'compaction',
   'delegation', 'tool-ask-user', 'tool-todo', 'tool-web',
+]
+
+const personaMustContain = [
+  'Claude Fable 5.1',
+  '运行环境适配（DeepSeek Harness）',
+  '{{model}}',
+]
+
+const artifactMustContain = [
+  'customSkillDirs',
+  "new URL('skills/', baseUrl)",
+  'persona: "You are a subagent launched by a DeepSeek Harness session on the Claude Fable 5.1',
+]
+
+const bundledSkillFiles = [
+  'preset/skills/claude-fable-5-1-provenance/SKILL.md',
+  'preset/skills/claude-fable-5-1-provenance/reference/Claude-Fable-5.1.md',
 ]
 
 let yaml
@@ -55,7 +80,29 @@ if (missing.length) throw new Error('missing rows: ' + missing.join(', '))
 
 const persona = rows.find((row) => row.id === 'persona')
 if (!persona?.config?.prefix) throw new Error('persona row has no config.prefix (dsh >= 0.1.5 schema)')
-if (/\{\{/.test(persona.config.prefix)) throw new Error('persona prefix contains a {{...}} variable group')
+
+const prefix = persona.config.prefix
+const leftover = prefix.replace(/\{\{(?:model|cwd)\}\}/g, '')
+if (leftover.includes('{{')) throw new Error('persona prefix contains a {{...}} variable group')
+for (const needle of personaMustContain) {
+  if (!prefix.includes(needle)) throw new Error('persona prefix is missing: ' + needle)
+}
+for (const needle of artifactMustContain) {
+  if (!text.includes(needle)) throw new Error('composition is missing a built-in patch: ' + needle)
+}
+for (const relative of bundledSkillFiles) {
+  if (!existsSync(join(root, relative))) throw new Error('bundled skill file is missing: ' + relative)
+}
+
+// The fork row keeps the parent persona on purpose: inheriting history and staying
+// eligible for KV-cache reuse both depend on parent and child sharing one prefix.
+if (/tool-subagent-fork[\s\S]{0,400}?\n\s+persona:/.test(text)) {
+  throw new Error('tool-subagent-fork must keep the parent persona')
+}
 
 console.log('OK — %d rows: %s', rows.length, ids.join(', '))
-console.log('   persona.prefix: %d chars | suffix: %s', persona.config.prefix.length, JSON.stringify(persona.config.suffix))
+console.log('   persona.prefix: %d chars | suffix: %s',
+  prefix.length, JSON.stringify(persona.config.suffix))
+const childPersona = text.match(/persona: "(You are a subagent launched[^"]*)"/)?.[1]
+console.log('   spawn child persona: %d chars | fork: inherits the parent persona', childPersona?.length ?? 0)
+console.log('   bundled skill: %d file(s)', bundledSkillFiles.length)

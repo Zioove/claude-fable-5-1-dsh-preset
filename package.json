@@ -1,7 +1,7 @@
 {
   "name": "dsh-preset-claude-fable-5-1",
-  "version": "1.0.1",
-  "description": "DeepSeek Harness agent preset + bundle plugin: the Claude Fable 5.1 persona on dsh's standard toolset",
+  "version": "1.1.0",
+  "description": "DeepSeek Harness agent preset + bundle plugin: the Claude Fable 5.1 persona on dsh's standard toolset, with a preset-local provenance skill and a slim spawned-subagent persona",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

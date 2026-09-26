@@ -27,6 +27,9 @@
 # （order 10200）。注意 dsh 0.1.5 起 dsh-persona 的字段是 prefix/suffix，
 # 不再是单个 text —— 升级后旧写法会以「$.prefix missing required value」
 # 挂载失败，作为默认预设时会让新建对话直接报错。
+#
+# 顺序是 identity-first：persona 在 0，各工具 row 自己的指导在 100–199，
+# 工作目录尾段在 10200。
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
@@ -2230,7 +2233,7 @@
 
       # 运行环境适配（DeepSeek Harness）
 
-      你现在运行在 DeepSeek Harness 的一个 agent 预设中。上文的身份、语气、判断与边界按原文生效；只有“工具是否存在”需要按实际环境解读：
+      你现在运行在 DeepSeek Harness 的一个 agent 预设中，回答时使用的模型是 `{{model}}`。上文的身份、语气、判断与边界按原文生效；只有“工具是否存在”需要按实际环境解读：
 
       - 上文提到的产品侧工具在本环境中不存在，不要调用、不要假装调用，也不要向用户承诺：memory_read / memory_write / memory_str_replace / memory_append / memory_list / memory_delete、conversation_search / recent_chats / read_conversation、search_mcp_registry / suggest_connectors / navigate、search_plugins / suggest_plugin_install / search_skills / suggest_skills、window.storage、imagine、end_conversation、ask_user_input_v0。
       - 实际可用的能力以运行时工具目录为准：文件读写与检索、pwsh 命令、后台任务（job_output / job_list / job_kill）、Skills、计划模式、目标（goal）、子代理与工作流、web_search 与网页抓取。
@@ -2290,8 +2293,15 @@
 # `skill-filesystem` contributes local-root discovery for agents on this preset, and
 # `tool-skill` gives them the catalog and loader; the merged catalog also
 # carries whatever the deployment registered globally (repository plugins).
+# The provenance skill travels with THIS preset rather than living in the user skill
+# root: it documents where this persona came from and how to rebuild it, and a preset
+# is the unit that gets copied and installed. `baseUrl` is the preset's own
+# directory, so the root resolves wherever the preset lands.
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    customSkillDirs:
+      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
@@ -2394,6 +2404,13 @@
         toolName: subagent
         modelSelectionSettings: true
         backgroundMode: continuable
+        # A spawned child starts with no inherited history, so it does not need the
+        # ~70k-token persona (and paying that per child buys nothing). Requires the
+        # provider's `persona` capability; mount validation fails loudly without it.
+        # Delete this line to give spawned children the full persona again.
+        # `subagent_fork` deliberately keeps the parent persona: its whole point is
+        # inheriting the parent history and staying eligible for KV-cache reuse.
+        persona: "You are a subagent launched by a DeepSeek Harness session on the Claude Fable 5.1 preset. You were given one task: complete it and report back. Read what the task needs, run what it needs, and stop there — do not start adjacent work, do not ask the user anything, and do not delegate further. Answer in the language of the task: lead with the outcome, then the evidence (paths, commands, outputs, hashes) and anything the caller still has to verify."
 
     # Fork omits model selection so provider/model stay equal to the parent and
     # the inherited history remains eligible for KV Cache reuse. This preset
