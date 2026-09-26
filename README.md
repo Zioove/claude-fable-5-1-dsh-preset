@@ -1,5 +1,7 @@
 # Claude Fable 5.1 · DeepSeek Harness Agent Preset
 
+**中文** | [English](README.en.md)
+
 把 **Claude Fable 5.1 系统提示词**（`prompt/Claude-Fable-5.1.md`，约 275 KB / 2186 行）
 作为人格层，接到 **DeepSeek Harness (dsh)** 的 agent 预设上。装好后在 dsh 里选
 「Claude Fable 5.1」即可得到一个带完整编码工具链、但身份 / 语气 / 判断准则按
