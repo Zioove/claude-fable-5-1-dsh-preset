@@ -20,13 +20,20 @@ if ! git diff --quiet -- preset/agent.cordis.yml; then
   exit 1
 fi
 
-echo "== no unresolved prompt variables =="
+echo "== only registered prompt variables =="
 node -e '
 const fs = require("node:fs");
 const text = fs.readFileSync("prompt/Claude-Fable-5.1.md", "utf8") + fs.readFileSync("prompt/harness-bridge.md", "utf8");
-const groups = text.match(/\{\{/g);
-if (groups) { console.error("found " + groups.length + " {{ group(s)"); process.exit(1); }
-console.log("ok: no prompt variable groups");
+// dsh renders {{...}} strictly against registered variables; anything else fails the turn.
+const allowed = new Set(["model", "cwd"]);
+for (const group of text.match(/\{\{[^{}]*\}\}/g) ?? []) {
+  const variable = group.slice(2, -2);
+  if (!allowed.has(variable)) { console.error("unregistered prompt variable: " + group); process.exit(1); }
+}
+if (text.replace(/\{\{(?:model|cwd)\}\}/g, "").includes("{{")) {
+  console.error("unbalanced or malformed double-brace group"); process.exit(1);
+}
+console.log("ok: only registered prompt variables");
 '
 
 echo "== composition structure =="
